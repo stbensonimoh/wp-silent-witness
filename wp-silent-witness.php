@@ -121,6 +121,15 @@ class WP_Silent_Witness {
     }
 
     public function cli_command( $args ) {
+        if ( "destroy" === $action ) {
+            if ( ! isset( $args[1] ) || "--yes" !== $args[1] ) {
+                WP_CLI::error( "This will delete all logs and the database table. Use: wp silent-witness destroy --yes" );
+            }
+            $wpdb->query( "DROP TABLE IF EXISTS $this->table" );
+            delete_transient( "silent_witness_db_ready" );
+            WP_CLI::success( "Database table dropped and logs destroyed." );
+            return;
+        }
         global $wpdb;
         $action = $args[0] ?? 'list';
 
