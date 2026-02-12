@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Silent Witness
  * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Benson Imoh
  * License: MIT
  */
@@ -29,13 +29,21 @@ class WP_Silent_Witness {
 
         $this->maybe_create_table();
 
-        set_error_handler( [ $this, 'handle_error' ] );
-        set_exception_handler( [ $this, 'handle_exception' ] );
-        register_shutdown_function( [ $this, 'handle_shutdown' ] );
+        // Register immediately
+        $this->register_handlers();
+
+        // RE-REGISTER on init to override plugins that hijack the handler
+        add_action( 'init', [ $this, 'register_handlers' ], 0 );
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             WP_CLI::add_command( 'silent-witness', [ $this, 'cli_command' ] );
         }
+    }
+
+    public function register_handlers() {
+        set_error_handler( [ $this, 'handle_error' ] );
+        set_exception_handler( [ $this, 'handle_exception' ] );
+        register_shutdown_function( [ $this, 'handle_shutdown' ] );
     }
 
     private function maybe_create_table() {
@@ -83,19 +91,12 @@ class WP_Silent_Witness {
         $clean_file = str_replace( ABSPATH, '', $file );
         $hash = md5( $type . $message . $clean_file . $line );
         
-        // LOG TO SYSLOG/ERROR_LOG FOR DEBUGGING
-        error_log("Silent Witness attempting to log: $type in $clean_file:$line");
-
-        $res = $wpdb->query( $wpdb->prepare(
+        $wpdb->query( $wpdb->prepare(
             "INSERT INTO $this->table (hash, type, message, file, line, context) 
              VALUES (%s, %s, %s, %s, %d, %s)
              ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
             $hash, $type, substr( $message, 0, 2000 ), $clean_file, $line, json_encode(['blog_id' => get_current_blog_id()])
         ));
-
-        if ( false === $res ) {
-            error_log("Silent Witness SQL Error: " . $wpdb->last_error);
-        }
     }
 
     private function map_error_type( $errno ) {
@@ -114,11 +115,11 @@ class WP_Silent_Witness {
             $results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
             echo json_encode( $results ?: [], JSON_PRETTY_PRINT );
         } elseif ( 'test' === $action ) {
-            WP_CLI::log( "Table name: $this->table" );
+            WP_CLI::log( "Triggering test error..." );
             trigger_error( 'Diagnostic Test', E_USER_WARNING );
             
-            // Bypass the handler and insert directly to verify DB connectivity
-            $wpdb->query( $wpdb->prepare( "INSERT INTO $this->table (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1", md5('direct-test'), 'TEST', 'Direct DB Test', 'cli', 0 ) );
+            WP_CLI::log( "Triggering direct DB insert..." );
+            $wpdb->query( $wpdb->prepare( "INSERT INTO $this->table (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1", md5('direct-test-' . time()), 'TEST', 'Direct DB Test', 'cli', 0 ) );
             
             $count = $wpdb->get_var( "SELECT COUNT(*) FROM $this->table" );
             WP_CLI::success( "Test completed. Total rows in DB: $count" );
