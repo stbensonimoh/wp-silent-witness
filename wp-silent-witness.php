@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: WP Silent Witness
- * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.7
+ * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
+ * Version: 2.0.0
  * Author: Benson Imoh
  * License: MIT
  */
@@ -10,11 +10,16 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * WP_Silent_Witness Class
+ * WP_Silent_Witness Class (v2.0.0 - The Ingestor)
+ * 
+ * Instead of trapping errors in real-time (which is prone to interference),
+ * this version tails the 'debug.log' file, de-duplicates entries, and 
+ * stores them in a custom table.
  */
 class WP_Silent_Witness {
     private static $instance = null;
     private $table;
+    private $log_path;
 
     public static function init() {
         if ( null === self::$instance ) {
@@ -26,27 +31,13 @@ class WP_Silent_Witness {
     private function __construct() {
         global $wpdb;
         $this->table = $wpdb->base_prefix . 'silent_witness_logs';
+        $this->log_path = WP_CONTENT_DIR . '/debug.log';
 
         $this->maybe_create_table();
-
-        // Level 1: Immediate registration
-        $this->register_handlers();
-
-        // Level 2: Hook into every possible early action to reclaim the handler
-        add_action( 'muplugins_loaded', [ $this, 'register_handlers' ], 0 );
-        add_action( 'plugins_loaded', [ $this, 'register_handlers' ], 0 );
-        add_action( 'setup_theme', [ $this, 'register_handlers' ], 0 );
-        add_action( 'init', [ $this, 'register_handlers' ], 0 );
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             WP_CLI::add_command( 'silent-witness', [ $this, 'cli_command' ] );
         }
-    }
-
-    public function register_handlers() {
-        set_error_handler( [ $this, 'handle_error' ] );
-        set_exception_handler( [ $this, 'handle_exception' ] );
-        register_shutdown_function( [ $this, 'handle_shutdown' ] );
     }
 
     private function maybe_create_table() {
@@ -73,66 +64,104 @@ class WP_Silent_Witness {
         dbDelta( $sql );
     }
 
-    public function handle_error( $errno, $errstr, $errfile, $errline ) {
-        $this->log( $this->map_error_type( $errno ), $errstr, $errfile, $errline );
-        // Return false to allow the next error handler in the stack (if any) to run
+    /**
+     * Ingest the debug.log file using an offset pointer for efficiency.
+     */
+    public function ingest() {
+        if ( ! file_exists( $this->log_path ) ) {
+            return "Log file not found at $this->log_path";
+        }
+
+        $handle = fopen( $this->log_path, 'r' );
+        if ( ! $handle ) return "Could not open log file.";
+
+        $last_offset = (int) get_site_option( 'silent_witness_log_offset', 0 );
+        $file_size = filesize( $this->log_path );
+
+        // Handle Log Rotation/Truncation
+        if ( $file_size < $last_offset ) {
+            $last_offset = 0;
+        }
+
+        fseek( $handle, $last_offset );
+
+        $ingested_count = 0;
+        while ( ( $line = fgets( $handle ) ) !== false ) {
+            if ( $this->process_line( $line ) ) {
+                $ingested_count++;
+            }
+        }
+
+        update_site_option( 'silent_witness_log_offset', ftell( $handle ) );
+        fclose( $handle );
+
+        return $ingested_count;
+    }
+
+    /**
+     * Parse a standard WordPress error log line.
+     * Format: [Timestamp] PHP Level: Message in File on line X
+     */
+    private function process_line( $line ) {
+        // Regex to extract Type, Message, File, and Line
+        // Example: [12-Feb-2026 08:00:00 UTC] PHP Warning:  Undefined variable $x in /path/file.php on line 10
+        $pattern = '/^\[[^\]]+\] PHP ([^:]+):  (.+?) in (.+?) on line (\d+)/';
+        
+        if ( preg_match( $pattern, $line, $matches ) ) {
+            $this->store_log( 
+                trim( $matches[1] ), 
+                trim( $matches[2] ), 
+                trim( $matches[3] ), 
+                (int) $matches[4] 
+            );
+            return true;
+        }
         return false;
     }
 
-    public function handle_exception( $exception ) {
-        $this->log( 'EXCEPTION', $exception->getMessage(), $exception->getFile(), $exception->getLine() );
-    }
-
-    public function handle_shutdown() {
-        $error = error_get_last();
-        if ( $error && in_array( $error['type'], [ E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR ] ) ) {
-            $this->log( 'FATAL', $error['message'], $error['file'], $error['line'] );
-        }
-    }
-
-    private function log( $type, $message, $file, $line ) {
+    private function store_log( $type, $message, $file, $line ) {
         global $wpdb;
         $clean_file = str_replace( ABSPATH, '', $file );
         $hash = md5( $type . $message . $clean_file . $line );
-        
-        $wpdb->query( $wpdb->prepare(
-            "INSERT INTO $this->table (hash, type, message, file, line, context) 
-             VALUES (%s, %s, %s, %s, %d, %s)
-             ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
-            $hash, $type, substr( $message, 0, 2000 ), $clean_file, $line, json_encode(['blog_id' => get_current_blog_id()])
-        ));
-    }
 
-    private function map_error_type( $errno ) {
-        $types = [E_ERROR=>'ERROR', E_WARNING=>'WARNING', E_PARSE=>'PARSE', E_NOTICE=>'NOTICE', E_DEPRECATED=>'DEPRECATED', E_USER_ERROR=>'USER_ERROR', E_USER_WARNING=>'USER_WARNING'];
-        return $types[$errno] ?? 'UNKNOWN';
+        $wpdb->query( $wpdb->prepare(
+            "INSERT INTO $this->table (hash, type, message, file, line) 
+             VALUES (%s, %s, %s, %s, %d) 
+             ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
+            $hash, $type, substr( $message, 0, 2000 ), $clean_file, $line
+        ));
     }
 
     public function cli_command( $args ) {
         global $wpdb;
         $action = $args[0] ?? 'list';
 
-        if ( 'destroy' === $action ) {
-            $wpdb->query( "DROP TABLE IF EXISTS $this->table" );
-            WP_CLI::success( "Table dropped." );
+        if ( 'ingest' === $action ) {
+            WP_CLI::log( "Ingesting new entries from debug.log..." );
+            $count = $this->ingest();
+            if ( is_numeric( $count ) ) {
+                WP_CLI::success( "Ingested $count new de-duplicated entries." );
+            } else {
+                WP_CLI::error( $count );
+            }
         } elseif ( 'export' === $action ) {
             $results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
             echo json_encode( $results ?: [], JSON_PRETTY_PRINT );
-        } elseif ( 'test' === $action ) {
-            // Re-register right before test
-            $this->register_handlers();
-            
-            WP_CLI::log( "Triggering test error..." );
-            trigger_error( 'Diagnostic Test', E_USER_WARNING );
-            
-            WP_CLI::log( "Triggering direct DB insert..." );
-            $wpdb->query( $wpdb->prepare( "INSERT INTO $this->table (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1", md5('direct-test-' . time()), 'TEST', 'Direct DB Test', 'cli', 0 ) );
-            
-            $count = $wpdb->get_var( "SELECT COUNT(*) FROM $this->table" );
-            WP_CLI::success( "Test completed. Total rows in DB: $count" );
+        } elseif ( 'clear' === $action ) {
+            $wpdb->query( "TRUNCATE TABLE $this->table" );
+            update_site_option( 'silent_witness_log_offset', 0 );
+            WP_CLI::success( "Database and offset pointer cleared." );
+        } elseif ( 'destroy' === $action ) {
+            if ( ! isset( $args[1] ) || '--yes' !== $args[1] ) {
+                WP_CLI::error( "Use: wp silent-witness destroy --yes" );
+            }
+            $wpdb->query( "DROP TABLE IF EXISTS $this->table" );
+            delete_site_option( 'silent_witness_log_offset' );
+            WP_CLI::success( "Table and state destroyed." );
         } else {
-            WP_CLI::error( "Usage: wp silent-witness [export|destroy|test]" );
+            WP_CLI::error( "Usage: wp silent-witness [ingest|export|clear|destroy]" );
         }
     }
 }
+
 WP_Silent_Witness::init();
