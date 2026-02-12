@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Silent Witness
  * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Benson Imoh
  * License: MIT
  */
@@ -29,10 +29,13 @@ class WP_Silent_Witness {
 
         $this->maybe_create_table();
 
-        // Register immediately
+        // Level 1: Immediate registration
         $this->register_handlers();
 
-        // RE-REGISTER on init to override plugins that hijack the handler
+        // Level 2: Hook into every possible early action to reclaim the handler
+        add_action( 'muplugins_loaded', [ $this, 'register_handlers' ], 0 );
+        add_action( 'plugins_loaded', [ $this, 'register_handlers' ], 0 );
+        add_action( 'setup_theme', [ $this, 'register_handlers' ], 0 );
         add_action( 'init', [ $this, 'register_handlers' ], 0 );
 
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -72,6 +75,7 @@ class WP_Silent_Witness {
 
     public function handle_error( $errno, $errstr, $errfile, $errline ) {
         $this->log( $this->map_error_type( $errno ), $errstr, $errfile, $errline );
+        // Return false to allow the next error handler in the stack (if any) to run
         return false;
     }
 
@@ -115,6 +119,9 @@ class WP_Silent_Witness {
             $results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
             echo json_encode( $results ?: [], JSON_PRETTY_PRINT );
         } elseif ( 'test' === $action ) {
+            // Re-register right before test
+            $this->register_handlers();
+            
             WP_CLI::log( "Triggering test error..." );
             trigger_error( 'Diagnostic Test', E_USER_WARNING );
             
