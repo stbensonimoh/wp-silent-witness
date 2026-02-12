@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Silent Witness
  * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: Benson Imoh
  * License: MIT
  */
@@ -33,7 +33,7 @@ class WP_Silent_Witness {
         // Initialize schema (lightweight check via transient)
         $this->maybe_create_table();
 
-        // Register handlers - use high priority for error handler
+        // Register handlers
         set_error_handler( [ $this, 'handle_error' ] );
         set_exception_handler( [ $this, 'handle_exception' ] );
         register_shutdown_function( [ $this, 'handle_shutdown' ] );
@@ -71,9 +71,8 @@ class WP_Silent_Witness {
     }
 
     public function handle_error( $errno, $errstr, $errfile, $errline ) {
-        // Log EVERYTHING regardless of error_reporting for now to verify capture
         $this->log( $this->map_error_type( $errno ), $errstr, $errfile, $errline );
-        return false; // Let WP continue its usual error handling
+        return false;
     }
 
     public function handle_exception( $exception ) {
@@ -90,21 +89,21 @@ class WP_Silent_Witness {
     private function log( $type, $message, $file, $line ) {
         global $wpdb;
 
-        // Strip ABSPATH for cleaner logs
         $clean_file = str_replace( ABSPATH, '', $file );
-        
-        // Generate de-duplication hash
         $hash = md5( $type . $message . $clean_file . $line );
-
-        // Use a more robust check for WP_CLI context to avoid missing CLI-triggered errors
         $context = $this->get_request_context();
 
-        $wpdb->query( $wpdb->prepare(
+        $inserted = $wpdb->query( $wpdb->prepare(
             "INSERT INTO $this->table (hash, type, message, file, line, context) 
              VALUES (%s, %s, %s, %s, %d, %s)
              ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
             $hash, $type, substr( $message, 0, 2000 ), $clean_file, $line, $context
         ));
+
+        // If insert failed, check if it's because the table disappeared or has issues
+        if ( false === $inserted && defined( 'WP_CLI' ) && WP_CLI ) {
+            error_log( "Silent Witness DB Error: " . $wpdb->last_error );
+        }
     }
 
     private function get_request_context() {
@@ -113,11 +112,9 @@ class WP_Silent_Witness {
             'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
             'user_id' => 0
         ];
-        
         if ( function_exists( 'get_current_user_id' ) ) {
             $context['user_id'] = get_current_user_id();
         }
-        
         return json_encode( $context );
     }
 
@@ -147,7 +144,7 @@ class WP_Silent_Witness {
         if ( 'export' === $action ) {
             $results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
             if ( empty( $results ) ) {
-                WP_CLI::log( "No errors captured yet." );
+                WP_CLI::log( "No errors captured yet in $this->table" );
                 echo "[]";
             } else {
                 echo json_encode( $results, JSON_PRETTY_PRINT );
@@ -156,10 +153,26 @@ class WP_Silent_Witness {
             $wpdb->query( "TRUNCATE TABLE $this->table" );
             WP_CLI::success( "Logs cleared." );
         } elseif ( 'test' === $action ) {
+            WP_CLI::log( "Triggering test error..." );
             trigger_error( 'Silent Witness Diagnostic Test', E_USER_WARNING );
-            WP_CLI::success( "Test error triggered. Run 'wp silent-witness export' to verify." );
+            
+            // Immediate check
+            $check = $wpdb->get_var( $wpdb->prepare( "SELECT count FROM $this->table WHERE type = %s", 'USER_WARNING' ) );
+            if ( $check ) {
+                WP_CLI::success( "Test error captured! (Count: $check). Run 'wp silent-witness export' to see it." );
+            } else {
+                WP_CLI::error( "Test error triggered but NOT captured in DB. Table: $this->table. Last DB Error: " . $wpdb->last_error );
+            }
+        } elseif ( 'check-db' === $action ) {
+            $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $this->table ) );
+            if ( $table_exists ) {
+                $count = $wpdb->get_var( "SELECT COUNT(*) FROM $this->table" );
+                WP_CLI::success( "Table '$this->table' exists with $count records." );
+            } else {
+                WP_CLI::error( "Table '$this->table' does NOT exist." );
+            }
         } else {
-            WP_CLI::error( "Usage: wp silent-witness [export|clear|destroy|test]" );
+            WP_CLI::error( "Usage: wp silent-witness [export|clear|destroy|test|check-db]" );
         }
     }
 }
