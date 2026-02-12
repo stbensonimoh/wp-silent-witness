@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Silent Witness
  * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Benson Imoh
  * License: MIT
  */
@@ -121,8 +121,11 @@ class WP_Silent_Witness {
     }
 
     public function cli_command( $args ) {
-        if ( "destroy" === $action ) {
-            if ( ! isset( $args[1] ) || "--yes" !== $args[1] ) {
+        global $wpdb;
+        $action = $args[0] ?? 'list';
+
+        if ( 'destroy' === $action ) {
+            if ( ! isset( $args[1] ) || '--yes' !== $args[1] ) {
                 WP_CLI::error( "This will delete all logs and the database table. Use: wp silent-witness destroy --yes" );
             }
             $wpdb->query( "DROP TABLE IF EXISTS $this->table" );
@@ -130,8 +133,6 @@ class WP_Silent_Witness {
             WP_CLI::success( "Database table dropped and logs destroyed." );
             return;
         }
-        global $wpdb;
-        $action = $args[0] ?? 'list';
 
         if ( 'export' === $action ) {
             $results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
@@ -140,7 +141,7 @@ class WP_Silent_Witness {
             $wpdb->query( "TRUNCATE TABLE $this->table" );
             WP_CLI::success( "Logs cleared." );
         } else {
-            WP_CLI::error( "Usage: wp silent-witness [export|clear]" );
+            WP_CLI::error( "Usage: wp silent-witness [export|clear|destroy]" );
         }
     }
 }
