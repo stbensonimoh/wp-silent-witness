@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Silent Witness
  * Description: Zero-cost, high-performance error trapping and de-duplication for WordPress.
- * Version: 1.0.3
+ * Version: 1.0.4
  * Author: Benson Imoh
  * License: MIT
  */
@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *
  * Intercepts PHP errors and exceptions, de-duplicates them using hashes,
  * and stores them in a custom database table for easy analysis and export.
+ * Multisite Aware: Uses a single global table (wp_silent_witness_logs) for the whole network.
  */
 class WP_Silent_Witness {
     private static $instance = null;
@@ -28,7 +29,8 @@ class WP_Silent_Witness {
 
     private function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'silent_witness_logs';
+        // MULTISITE FIX: Use base_prefix to ensure a single global table across the network
+        $this->table = $wpdb->base_prefix . 'silent_witness_logs';
 
         // Initialize schema (lightweight check via transient)
         $this->maybe_create_table();
@@ -45,7 +47,9 @@ class WP_Silent_Witness {
     }
 
     private function maybe_create_table() {
-        if ( get_transient( 'silent_witness_db_ready' ) ) return;
+        // Use a site-independent way to check readiness for multisite
+        if ( ! is_multisite() && get_transient( 'silent_witness_db_ready' ) ) return;
+        if ( is_multisite() && get_site_transient( 'silent_witness_db_ready' ) ) return;
 
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
@@ -67,7 +71,11 @@ class WP_Silent_Witness {
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
 
-        set_transient( 'silent_witness_db_ready', true, DAY_IN_SECONDS );
+        if ( is_multisite() ) {
+            set_site_transient( 'silent_witness_db_ready', true, DAY_IN_SECONDS );
+        } else {
+            set_transient( 'silent_witness_db_ready', true, DAY_IN_SECONDS );
+        }
     }
 
     public function handle_error( $errno, $errstr, $errfile, $errline ) {
@@ -93,24 +101,20 @@ class WP_Silent_Witness {
         $hash = md5( $type . $message . $clean_file . $line );
         $context = $this->get_request_context();
 
-        $inserted = $wpdb->query( $wpdb->prepare(
+        $wpdb->query( $wpdb->prepare(
             "INSERT INTO $this->table (hash, type, message, file, line, context) 
              VALUES (%s, %s, %s, %s, %d, %s)
              ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
             $hash, $type, substr( $message, 0, 2000 ), $clean_file, $line, $context
         ));
-
-        // If insert failed, check if it's because the table disappeared or has issues
-        if ( false === $inserted && defined( 'WP_CLI' ) && WP_CLI ) {
-            error_log( "Silent Witness DB Error: " . $wpdb->last_error );
-        }
     }
 
     private function get_request_context() {
         $context = [
             'url' => $_SERVER['REQUEST_URI'] ?? 'CLI',
             'method' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
-            'user_id' => 0
+            'user_id' => 0,
+            'blog_id' => get_current_blog_id()
         ];
         if ( function_exists( 'get_current_user_id' ) ) {
             $context['user_id'] = get_current_user_id();
@@ -136,7 +140,11 @@ class WP_Silent_Witness {
                 WP_CLI::error( "This will delete all logs and the database table. Use: wp silent-witness destroy --yes" );
             }
             $wpdb->query( "DROP TABLE IF EXISTS $this->table" );
-            delete_transient( "silent_witness_db_ready" );
+            if ( is_multisite() ) {
+                delete_site_transient( 'silent_witness_db_ready' );
+            } else {
+                delete_transient( 'silent_witness_db_ready' );
+            }
             WP_CLI::success( "Database table dropped and logs destroyed." );
             return;
         }
@@ -153,23 +161,22 @@ class WP_Silent_Witness {
             $wpdb->query( "TRUNCATE TABLE $this->table" );
             WP_CLI::success( "Logs cleared." );
         } elseif ( 'test' === $action ) {
-            WP_CLI::log( "Triggering test error..." );
+            WP_CLI::log( "Triggering test error on Blog ID: " . get_current_blog_id() );
             trigger_error( 'Silent Witness Diagnostic Test', E_USER_WARNING );
             
-            // Immediate check
             $check = $wpdb->get_var( $wpdb->prepare( "SELECT count FROM $this->table WHERE type = %s", 'USER_WARNING' ) );
             if ( $check ) {
-                WP_CLI::success( "Test error captured! (Count: $check). Run 'wp silent-witness export' to see it." );
+                WP_CLI::success( "Test error captured! (Total USER_WARNING count: $check). Run 'wp silent-witness export' to see it." );
             } else {
-                WP_CLI::error( "Test error triggered but NOT captured in DB. Table: $this->table. Last DB Error: " . $wpdb->last_error );
+                WP_CLI::error( "Test error triggered but NOT captured. Table: $this->table. Last DB Error: " . $wpdb->last_error );
             }
         } elseif ( 'check-db' === $action ) {
             $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $this->table ) );
             if ( $table_exists ) {
                 $count = $wpdb->get_var( "SELECT COUNT(*) FROM $this->table" );
-                WP_CLI::success( "Table '$this->table' exists with $count records." );
+                WP_CLI::success( "Global table '$this->table' exists with $count records." );
             } else {
-                WP_CLI::error( "Table '$this->table' does NOT exist." );
+                WP_CLI::error( "Global table '$this->table' does NOT exist." );
             }
         } else {
             WP_CLI::error( "Usage: wp silent-witness [export|clear|destroy|test|check-db]" );
