@@ -39,7 +39,7 @@ cd wp-silent-witness
 
 Then activate via WordPress admin, or for MU-plugin usage:
 ```bash
-cp wp-content/plugins/wp-silent-witness/wp-silent-witness.php wp-content/mu-plugins/
+cp ./wp-silent-witness.php ../../mu-plugins/
 ```
 
 ## Lifecycle Management
