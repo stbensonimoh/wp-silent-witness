@@ -22,14 +22,30 @@ Silent Witness solves this by:
 
 ## Installation
 
-### Method 1: Manual ZIP Download (Recommended)
+### Method 1: Composer (Recommended for Developers)
+
+```bash
+composer require stbensonimoh/wp-silent-witness
+```
+
+Or add to your `composer.json`:
+
+```json
+{
+    "require": {
+        "stbensonimoh/wp-silent-witness": "^2.0"
+    }
+}
+```
+
+### Method 2: Manual ZIP Download
 
 1. Download the latest release from [GitHub Releases](https://github.com/stbensonimoh/wp-silent-witness/releases)
 2. Extract the ZIP file
 3. For **must-use plugin**: upload `wp-silent-witness.php` to `wp-content/mu-plugins/`
 4. For **standard plugin**: upload the entire `wp-silent-witness` folder to `wp-content/plugins/`, then activate **WP Silent Witness** from **Plugins → Installed Plugins** in the WordPress admin.
 
-### Method 2: Git Clone
+### Method 3: Git Clone
 
 ```bash
 cd wp-content/plugins
@@ -93,9 +109,10 @@ We welcome contributions! Please follow these guidelines:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
 3. Follow [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/)
-4. Run `php -l` on your changes to check for syntax errors
-5. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
-6. Push to your fork and submit a PR
+4. Install development dependencies: `composer install`
+5. Run coding standards checks: `composer run phpcs`
+6. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
+7. Push to your fork and submit a PR
 
 ## Security & Performance
 
