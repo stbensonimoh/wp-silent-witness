@@ -18,12 +18,47 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * WP_Silent_Witness Class (v2.0.1 - The Background Ingestor)
+ *
+ * This class handles the ingestion of PHP error logs into a custom database table
+ * for deduplication and easier management. It utilizes WordPress cron to run
+ * periodically and provides WP-CLI commands for manual operations.
+ *
+ * @since 2.0.0
  */
 class WP_Silent_Witness {
+	/**
+	 * The singleton instance of the class.
+	 *
+	 * @since 2.0.0
+	 * @var WP_Silent_Witness|null
+	 */
 	private static $instance = null;
+
+	/**
+	 * The name of the custom log table.
+	 *
+	 * @since 2.0.0
+	 * @var string
+	 */
 	private $table;
+
+	/**
+	 * The path to the debug.log file.
+	 *
+	 * @since 2.0.0
+	 * @var string
+	 */
 	private $log_path;
 
+	/**
+	 * Initializes the singleton instance.
+	 *
+	 * Ensures only one instance of the class is running to prevent multiple
+	 * table creation checks or cron registrations.
+	 *
+	 * @since 2.0.0
+	 * @return WP_Silent_Witness The singleton instance.
+	 */
 	public static function init() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
@@ -31,6 +66,14 @@ class WP_Silent_Witness {
 		return self::$instance;
 	}
 
+	/**
+	 * Constructor for the class.
+	 *
+	 * Sets up the table name, log path, and registers necessary WordPress
+	 * hooks, including the textdomain loading and cron scheduling.
+	 *
+	 * @since 2.0.0
+	 */
 	private function __construct() {
 		global $wpdb;
 		$this->table    = $wpdb->base_prefix . 'silent_witness_logs';
@@ -63,6 +106,16 @@ class WP_Silent_Witness {
 		load_plugin_textdomain( 'wp-silent-witness', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 
+	/**
+	 * Checks if the custom logs table exists and creates it if it doesn't.
+	 *
+	 * This method uses dbDelta to ensure the table schema is maintained.
+	 * It creates a table indexed by a hash of the error properties to facilitate
+	 * efficient deduplication on INSERT ... ON DUPLICATE KEY UPDATE.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
 	private function maybe_create_table() {
 		global $wpdb;
 		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $this->table ) );
@@ -89,6 +142,16 @@ class WP_Silent_Witness {
 		dbDelta( $sql );
 	}
 
+	/**
+	 * Ingests new log entries from the debug.log file.
+	 *
+	 * It tracks the file offset using a site option to avoid re-reading the
+	 * entire file on every run. If the file size is smaller than the last offset,
+	 * it assumes the log was rotated or truncated and resets the offset.
+	 *
+	 * @since 2.0.0
+	 * @return int|string The number of new entries ingested, or an error message.
+	 */
 	public function ingest() {
 		if ( ! file_exists( $this->log_path ) ) {
 			/* translators: %s: Path to the log file. */
@@ -122,6 +185,17 @@ class WP_Silent_Witness {
 		return $ingested_count;
 	}
 
+	/**
+	 * Parses a single line from the PHP log.
+	 *
+	 * Uses regex to extract the error type, message, file path, and line number.
+	 * The pattern expects the standard WordPress/PHP log format:
+	 * [timestamp] PHP Type: Message in File on line X.
+	 *
+	 * @since 2.0.0
+	 * @param string $line The raw log line string.
+	 * @return bool True if the line was successfully parsed and stored, false otherwise.
+	 */
 	private function process_line( $line ) {
 		$pattern = '/^\[[^\]]+\] PHP ([^:]+):  (.+?) in (.+?) on line (\d+)/';
 		if ( preg_match( $pattern, $line, $matches ) ) {
@@ -131,6 +205,20 @@ class WP_Silent_Witness {
 		return false;
 	}
 
+	/**
+	 * Stores the parsed log data into the database.
+	 *
+	 * Calculates an MD5 hash of the error details to use as a primary key.
+	 * This allows for high-performance deduplication using "ON DUPLICATE KEY UPDATE",
+	 * which increments the occurrence count and updates the last_seen timestamp.
+	 *
+	 * @since 2.0.0
+	 * @param string $type    The PHP error type (e.g., Notice, Warning, Fatal Error).
+	 * @param string $message The error message content.
+	 * @param string $file    The absolute file path where the error occurred.
+	 * @param int    $line    The line number where the error occurred.
+	 * @return void
+	 */
 	private function store_log( $type, $message, $file, $line ) {
 		global $wpdb;
 		$clean_file = str_replace( ABSPATH, '', $file );
@@ -149,6 +237,19 @@ class WP_Silent_Witness {
 		);
 	}
 
+	/**
+	 * Handles WP-CLI commands for WP Silent Witness.
+	 *
+	 * Provides a command-line interface for common operations:
+	 * - ingest: Manually trigger log ingestion.
+	 * - export: Output all logs in the table as JSON.
+	 * - clear: Truncate the logs table and reset the file offset.
+	 * - destroy: Remove the table and unschedule the cron job.
+	 *
+	 * @since 2.0.0
+	 * @param array $args The positional arguments passed to the command.
+	 * @return void
+	 */
 	public function cli_command( $args ) {
 		global $wpdb;
 		$action = $args[0] ?? 'list';
