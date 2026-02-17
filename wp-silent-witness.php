@@ -1,13 +1,20 @@
 <?php
 /**
  * Plugin Name: WP Silent Witness
+ * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
- * Version: 2.0.1
- * Author: Benson Imoh
- * License: MIT
+ * Version:     2.0.1
+ * Author:      Benson Imoh
+ * Author URI:  https://bensonimoh.com
+ * License:     GPLv2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: wp-silent-witness
+ * Domain Path: /languages
  */
 
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit; // Exit if accessed directly.
+}
 
 /**
  * WP_Silent_Witness Class (v2.0.1 - The Background Ingestor)
