@@ -5,7 +5,7 @@
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
  * Version:     2.0.1
  * Author:      Benson Imoh
- * Author URI:  https://bensonimoh.com
+ * Author URI:  https://stbensonimoh.com
  * License:     GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wp-silent-witness
