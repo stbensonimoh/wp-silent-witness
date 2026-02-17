@@ -1,6 +1,6 @@
 # WP Silent Witness
 
-**WP Silent Witness** is a zero-cost, high-performance error trapping and de-duplication plugin for WordPress.
+**WP Silent Witness** is a zero-cost, high-performance error log ingestion and de-duplication plugin for WordPress.
 
 It is designed for senior developers and consultants working in managed hosting environments (like WP Engine) where standard log files are often rotated, truncated, or difficult to access.
 
@@ -16,40 +16,30 @@ It is designed for senior developers and consultants working in managed hosting 
 Standard WordPress `debug.log` files are noisy and transient. Intermittent errors—the ones that happen once an hour or only during specific user actions—are easily lost.
 
 Silent Witness solves this by:
-1. **Intercepting every error**: It catches warnings, notices, exceptions, and even fatal "White Screen of Death" errors.
+1. **Ingesting from debug.log**: It reads and parses your existing WordPress debug log file (requires `WP_DEBUG_LOG` to be enabled), capturing PHP errors, warnings, and notices.
 2. **De-duplicating at the source**: It creates a unique hash for every error (Type + Message + File + Line). If an error happens 10,000 times, it occupies only **one row** in your database with an incrementing counter.
 3. **Structured Export**: It provides a clean JSON export via WP-CLI, making it perfect for analysis by AI assistants or external tools.
 
 ## Installation
 
-### Method 1: Composer (Recommended)
-
-```bash
-composer require stbensonimoh/wp-silent-witness
-```
-
-Or add to your `composer.json`:
-
-```json
-{
-    "require": {
-        "stbensonimoh/wp-silent-witness": "^2.0"
-    }
-}
-```
-
-### Method 2: Manual ZIP Download
+### Method 1: Manual ZIP Download (Recommended)
 
 1. Download the latest release from [GitHub Releases](https://github.com/stbensonimoh/wp-silent-witness/releases)
 2. Extract the ZIP file
-3. Upload `wp-silent-witness.php` to `wp-content/mu-plugins/` (for must-use plugin)
-4. Or upload to `wp-content/plugins/` (for standard plugin activation)
+3. For **must-use plugin**: upload `wp-silent-witness.php` to `wp-content/mu-plugins/`
+4. For **standard plugin**: upload the entire `wp-silent-witness` folder to `wp-content/plugins/wp-silent-witness/`, then activate **WP Silent Witness** from **Plugins → Installed Plugins** in the WordPress admin.
 
-### Method 3: Git Clone
+### Method 2: Git Clone
 
 ```bash
-cd wp-content/mu-plugins
+cd wp-content/plugins
 git clone https://github.com/stbensonimoh/wp-silent-witness.git
+cd wp-silent-witness
+```
+
+Then activate via WordPress admin, or for MU-plugin usage:
+```bash
+cp wp-content/plugins/wp-silent-witness/wp-silent-witness.php wp-content/mu-plugins/
 ```
 
 ## Lifecycle Management
@@ -103,28 +93,15 @@ We welcome contributions! Please follow these guidelines:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
 3. Follow [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/)
-4. Run `phpcs --standard=WordPress-Docs` before submitting
+4. Run `php -l` on your changes to check for syntax errors
 5. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
 6. Push to your fork and submit a PR
-
-### Development Setup
-
-```bash
-# Install dependencies
-composer install
-
-# Run coding standards checks
-composer run phpcs
-
-# Run tests (if available)
-composer run test
-```
 
 ## Security & Performance
 
 - **Zero SaaS Cost**: No external subscriptions required.
 - **Fast Hashing**: Uses MD5 for signature generation and `ON DUPLICATE KEY UPDATE` for atomic, high-speed database writes.
-- **Privacy**: Only captures basic request context (URL, Method, User ID). No sensitive POST data or cookies are logged by default.
+- **Privacy**: Only stores essential error metadata (type, message, file path, line number, and deduplication counters). It does not log request context (URL, HTTP method, user ID), POST data, or cookies by default.
 
 ## Frequently Asked Questions
 
@@ -140,10 +117,17 @@ A: Minimal. Each unique error occupies one row regardless of how many times it o
 
 A: Yes. The plugin uses `get_site_option()` and `update_site_option()` for network-wide consistency, and the logs table is shared across all sites.
 
+**Q: What do I need to enable for this to work?**
+
+A: You must enable WordPress debug logging by adding these to your `wp-config.php`:
+```php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+```
+
 ## Changelog
 
 ### 2.0.1
-- Fixed typo in inline comment ("Fudraise" → "Fundraise")
 - Added comprehensive PHPDoc blocks to all methods and properties
 - Added `@since` metadata to class-level docblock
 - Documented ON DUPLICATE KEY UPDATE ingestion strategy
@@ -157,7 +141,7 @@ A: Yes. The plugin uses `get_site_option()` and `update_site_option()` for netwo
 
 ## License
 
-MIT
+GPLv2 or later
 
 ## Credits
 
