@@ -249,7 +249,7 @@ class WP_Silent_Witness {
 	 *
 	 * @since 2.0.0
 	 * @param string[] $args Positional arguments passed to the command.
-	 *                       $args[0] is the action (ingest|export|clear|destroy|list).
+	 *                       $args[0] is the action (ingest|export|clear|destroy).
 	 *                       $args[1] is an optional confirmation flag (--yes) for destroy.
 	 * @return void
 	 */
