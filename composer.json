@@ -2,6 +2,7 @@
     "name": "stbensonimoh/wp-silent-witness",
     "description": "Zero-cost, high-performance log ingestion and de-duplication for WordPress.",
     "type": "wordpress-plugin",
+    "version": "2.0.1",
     "license": "GPL-2.0-or-later",
     "authors": [
         {
