@@ -216,6 +216,7 @@ class WP_Silent_Witness {
 	 * @param string $type    The PHP error type (e.g., Notice, Warning, Fatal Error).
 	 * @param string $message The error message content.
 	 * @param string $file    The absolute file path where the error occurred.
+	 *                        This is normalized to a path relative to ABSPATH before storage.
 	 * @param int    $line    The line number where the error occurred.
 	 * @return void
 	 */
@@ -247,7 +248,9 @@ class WP_Silent_Witness {
 	 * - destroy: Remove the table and unschedule the cron job.
 	 *
 	 * @since 2.0.0
-	 * @param array $args The positional arguments passed to the command.
+	 * @param string[] $args Positional arguments passed to the command.
+	 *                       $args[0] is the action (ingest|export|clear|destroy|list).
+	 *                       $args[1] is an optional confirmation flag (--yes) for destroy.
 	 * @return void
 	 */
 	public function cli_command( $args ) {
