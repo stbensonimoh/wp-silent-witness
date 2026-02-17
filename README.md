@@ -6,7 +6,7 @@ It is designed for senior developers and consultants working in managed hosting 
 
 ## Requirements
 
-- **PHP**: 8.0 or higher
+- **PHP**: 7.4 or higher
 - **WordPress**: 6.0 or higher
 - **Database**: MySQL 5.7+ or MariaDB 10.3+
 - **WP-CLI**: 2.0+ (optional, for CLI commands)
@@ -27,7 +27,7 @@ Silent Witness solves this by:
 1. Download the latest release from [GitHub Releases](https://github.com/stbensonimoh/wp-silent-witness/releases)
 2. Extract the ZIP file
 3. For **must-use plugin**: upload `wp-silent-witness.php` to `wp-content/mu-plugins/`
-4. For **standard plugin**: upload the entire `wp-silent-witness` folder to `wp-content/plugins/wp-silent-witness/`, then activate **WP Silent Witness** from **Plugins → Installed Plugins** in the WordPress admin.
+4. For **standard plugin**: upload the entire `wp-silent-witness` folder to `wp-content/plugins/`, then activate **WP Silent Witness** from **Plugins → Installed Plugins** in the WordPress admin.
 
 ### Method 2: Git Clone
 
@@ -101,13 +101,13 @@ We welcome contributions! Please follow these guidelines:
 
 - **Zero SaaS Cost**: No external subscriptions required.
 - **Fast Hashing**: Uses MD5 for signature generation and `ON DUPLICATE KEY UPDATE` for atomic, high-speed database writes.
-- **Privacy**: Only stores essential error metadata (type, message, file path, line number, and deduplication counters). It does not log request context (URL, HTTP method, user ID), POST data, or cookies by default.
+- **Privacy**: Only stores essential error metadata (type, message, file path, line number, and deduplication counters). It does not log request context (URL, HTTP method, user ID), POST data, or cookies.
 
 ## Frequently Asked Questions
 
 **Q: Will this slow down my site?**
 
-A: No. The ingestion runs via WordPress cron every 15 minutes, not on every page load. The database write uses an indexed hash lookup (O(1)) for deduplication.
+A: No. The ingestion runs via WordPress cron every 15 minutes, not on every page load. The database write uses an indexed hash lookup for efficient deduplication.
 
 **Q: How much database space does this use?**
 
