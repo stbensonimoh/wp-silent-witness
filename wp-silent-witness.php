@@ -224,6 +224,24 @@ class WP_Silent_Witness {
 		global $wpdb;
 		$clean_file = str_replace( ABSPATH, '', $file );
 		$hash       = md5( $type . $message . $clean_file . $line );
+
+		/*
+		 * Deduplication Strategy: ON DUPLICATE KEY UPDATE
+		 *
+		 * The hash column is the PRIMARY KEY, ensuring uniqueness per error signature.
+		 * When a duplicate hash is detected (same error type, message, file, and line),
+		 * the query updates the existing row instead of inserting a new one:
+		 *
+		 * - count = count + 1: Increments the occurrence counter for this error.
+		 * - last_seen = NOW(): Updates the timestamp to the current time.
+		 *
+		 * This approach provides:
+		 * - Atomic insert-or-update in a single query (no race conditions).
+		 * - O(1) deduplication via the hash index (no SELECT before INSERT needed).
+		 * - Automatic aggregation: 10,000 identical errors = 1 row with count = 10000.
+		 *
+		 * @link https://mariadb.com/kb/en/insert-on-duplicate-key-update/
+		 */
 		$wpdb->query(
 			$wpdb->prepare(
 				"INSERT INTO $this->table (hash, type, message, file, line) 
