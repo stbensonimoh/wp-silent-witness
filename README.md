@@ -38,6 +38,8 @@ Or add to your `composer.json`:
 }
 ```
 
+**Note:** Composer will install to `wp-content/plugins/` by default. If using as an MU-plugin, move or symlink the package to `wp-content/mu-plugins/`.
+
 ### Method 2: Manual ZIP Download
 
 1. Download the latest release from [GitHub Releases](https://github.com/stbensonimoh/wp-silent-witness/releases)
@@ -47,15 +49,18 @@ Or add to your `composer.json`:
 
 ### Method 3: Git Clone
 
+**For Standard Plugin:**
 ```bash
 cd wp-content/plugins
 git clone https://github.com/stbensonimoh/wp-silent-witness.git
-cd wp-silent-witness
 ```
+Then activate via WordPress admin.
 
-Then activate via WordPress admin, or for MU-plugin usage:
+**For MU-Plugin:**
 ```bash
-cp ./wp-silent-witness.php ../../mu-plugins/
+cd wp-content
+git clone https://github.com/stbensonimoh/wp-silent-witness.git plugins/wp-silent-witness
+cp plugins/wp-silent-witness/wp-silent-witness.php mu-plugins/
 ```
 
 ## Lifecycle Management
@@ -89,7 +94,7 @@ wp silent-witness clear
 ```
 
 #### Destruction (Tear Down)
-To completely remove the database table and all associated options:
+To completely remove the database table and cleanup the file offset tracking:
 ```bash
 wp silent-witness destroy --yes
 ```
@@ -107,12 +112,16 @@ We welcome contributions! Please follow these guidelines:
 ### Pull Requests
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
+2. Create a feature branch: `git checkout -b feature/your-feature-name`  
+   (Use prefixes: `feature/`, `fix/`, `docs/` followed by issue number if applicable, e.g., `feature/13-add-cli-command`)
 3. Follow [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/)
 4. Install development dependencies: `composer install`
 5. Run coding standards checks: `composer run phpcs`
-6. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
-7. Push to your fork and submit a PR
+6. **Test your changes** on a fresh WordPress install with `WP_DEBUG_LOG` enabled. Verify ingestion works with various error types (notice, warning, error).
+7. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
+8. Push to your fork and submit a PR
+
+**Note:** Some existing code may not yet pass all coding standards. Focus on ensuring your new code complies.
 
 ## Security & Performance
 
@@ -144,12 +153,16 @@ define('WP_DEBUG_LOG', true);
 
 ## Changelog
 
-### 2.0.1
-- Added comprehensive PHPDoc blocks to all methods and properties
-- Added `@since` metadata to class-level docblock
-- Documented ON DUPLICATE KEY UPDATE ingestion strategy
+### [2.0.1] - 2026-02-17
 
-### 2.0.0
+#### Added
+- Comprehensive PHPDoc blocks to all methods and properties
+- `@since` metadata to class-level docblock
+- Documentation for ON DUPLICATE KEY UPDATE ingestion strategy
+
+### [2.0.0] - 2026-02-15
+
+#### Added
 - Initial release of WP Silent Witness
 - Zero-cost log ingestion and deduplication
 - WP-CLI support for export, clear, and destroy operations
