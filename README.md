@@ -1,17 +1,67 @@
 # WP Silent Witness
 
-**WP Silent Witness** is a zero-cost, high-performance error trapping and de-duplication plugin for WordPress. 
+**WP Silent Witness** is a zero-cost, high-performance error log ingestion and de-duplication plugin for WordPress.
 
 It is designed for senior developers and consultants working in managed hosting environments (like WP Engine) where standard log files are often rotated, truncated, or difficult to access.
 
+## Requirements
+
+- **PHP**: 7.4 or higher
+- **WordPress**: 6.0 or higher
+- **Database**: MySQL 5.7+ or MariaDB 10.3+
+- **WP-CLI**: 2.0+ (optional, for CLI commands)
+
 ## Why it exists
 
-Standard WordPress `debug.log` files are noisy and transient. Intermittent errors—the ones that happen once an hour or only during specific user actions—are easily lost. 
+Standard WordPress `debug.log` files are noisy and transient. Intermittent errors—the ones that happen once an hour or only during specific user actions—are easily lost.
 
 Silent Witness solves this by:
-1. **Intercepting every error**: It catches warnings, notices, exceptions, and even fatal "White Screen of Death" errors.
+1. **Ingesting from debug.log**: It reads and parses your existing WordPress debug log file (requires `WP_DEBUG_LOG` to be enabled), capturing PHP errors, warnings, and notices.
 2. **De-duplicating at the source**: It creates a unique hash for every error (Type + Message + File + Line). If an error happens 10,000 times, it occupies only **one row** in your database with an incrementing counter.
 3. **Structured Export**: It provides a clean JSON export via WP-CLI, making it perfect for analysis by AI assistants or external tools.
+
+## Installation
+
+### Method 1: Composer (Recommended for Developers)
+
+```bash
+composer require stbensonimoh/wp-silent-witness
+```
+
+Or add to your `composer.json`:
+
+```json
+{
+    "require": {
+        "stbensonimoh/wp-silent-witness": "^2.0"
+    }
+}
+```
+
+**Note:** Composer will install to `wp-content/plugins/` by default. If using as an MU-plugin, move or symlink the package to `wp-content/mu-plugins/`.
+
+### Method 2: Manual ZIP Download
+
+1. Download the latest release from [GitHub Releases](https://github.com/stbensonimoh/wp-silent-witness/releases)
+2. Extract the ZIP file
+3. For **must-use plugin**: upload `wp-silent-witness.php` to `wp-content/mu-plugins/`
+4. For **standard plugin**: upload the entire `wp-silent-witness` folder to `wp-content/plugins/`, then activate **WP Silent Witness** from **Plugins → Installed Plugins** in the WordPress admin.
+
+### Method 3: Git Clone
+
+**For Standard Plugin:**
+```bash
+cd wp-content/plugins
+git clone https://github.com/stbensonimoh/wp-silent-witness.git
+```
+Then activate via WordPress admin.
+
+**For MU-Plugin:**
+```bash
+cd wp-content
+git clone https://github.com/stbensonimoh/wp-silent-witness.git plugins/wp-silent-witness
+cp plugins/wp-silent-witness/wp-silent-witness.php mu-plugins/
+```
 
 ## Lifecycle Management
 
@@ -23,34 +73,106 @@ As an MU-plugin, Silent Witness handles its own lifecycle without manual activat
 
 ## Usage
 
-### Exporting Logs
-To get a clean JSON report of all de-duplicated errors, run:
+### WP-CLI Commands
+
+#### Ingest Logs
+Manually trigger log ingestion from `debug.log`:
+```bash
+wp silent-witness ingest
+```
+
+#### Export Logs
+To get a clean JSON report of all de-duplicated errors:
 ```bash
 wp silent-witness export
 ```
 
-### Clearing Logs (Reset Counter)
+#### Clearing Logs (Reset Counter)
 To wipe the records but keep the database structure:
 ```bash
 wp silent-witness clear
 ```
 
-### Destruction (Tear Down)
-To completely remove the database table and all associated transients:
+#### Destruction (Tear Down)
+To completely remove the database table and cleanup the file offset tracking:
 ```bash
 wp silent-witness destroy --yes
 ```
 
-## Installation
+## Contributing
 
-1. Create a directory named `wp-content/mu-plugins` if it doesn't exist.
-2. Upload `wp-silent-witness.php` to that directory.
-3. (Optional) Upload `uninstall.php` to the same directory if you plan to move it to a standard plugin later.
+We welcome contributions! Please follow these guidelines:
+
+### Reporting Issues
+
+- Use [GitHub Issues](https://github.com/stbensonimoh/wp-silent-witness/issues)
+- Include WordPress version, PHP version, and steps to reproduce
+- For bugs, include relevant error messages or log excerpts
+
+### Pull Requests
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`  
+   (Use prefixes: `feature/`, `fix/`, `docs/` followed by issue number if applicable, e.g., `feature/13-add-cli-command`)
+3. Follow [WordPress Coding Standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/php/)
+4. Install development dependencies: `composer install`
+5. Run coding standards checks: `composer run phpcs`
+6. **Test your changes** on a fresh WordPress install with `WP_DEBUG_LOG` enabled. Verify ingestion works with various error types (notice, warning, error).
+7. Commit with descriptive messages following [Conventional Commits](https://www.conventionalcommits.org/)
+8. Push to your fork and submit a PR
+
+**Note:** Some existing code may not yet pass all coding standards. Focus on ensuring your new code complies.
 
 ## Security & Performance
+
 - **Zero SaaS Cost**: No external subscriptions required.
 - **Fast Hashing**: Uses MD5 for signature generation and `ON DUPLICATE KEY UPDATE` for atomic, high-speed database writes.
-- **Privacy**: Only captures basic request context (URL, Method, User ID). No sensitive POST data or cookies are logged by default.
+- **Privacy**: Only stores essential error metadata (type, message, file path, line number, and deduplication counters). It does not log request context (URL, HTTP method, user ID), POST data, or cookies.
+
+## Frequently Asked Questions
+
+**Q: Will this slow down my site?**
+
+A: No. The ingestion runs via WordPress cron every 15 minutes, not on every page load. The database write uses an indexed hash lookup for efficient deduplication.
+
+**Q: How much database space does this use?**
+
+A: Minimal. Each unique error occupies one row regardless of how many times it occurs. The table is indexed efficiently and stores only essential metadata.
+
+**Q: Can I use this on a multisite installation?**
+
+A: Yes. The plugin uses `get_site_option()` and `update_site_option()` for network-wide consistency, and the logs table is shared across all sites.
+
+**Q: What do I need to enable for this to work?**
+
+A: You must enable WordPress debug logging by adding these to your `wp-config.php`:
+```php
+define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+```
+
+## Changelog
+
+### [2.0.1] - 2026-02-17
+
+#### Added
+- Comprehensive PHPDoc blocks to all methods and properties
+- `@since` metadata to class-level docblock
+- Documentation for ON DUPLICATE KEY UPDATE ingestion strategy
+
+### [2.0.0] - 2026-02-15
+
+#### Added
+- Initial release of WP Silent Witness
+- Zero-cost log ingestion and deduplication
+- WP-CLI support for export, clear, and destroy operations
+- Automatic database table creation
+- Hash-based deduplication with occurrence counting
 
 ## License
-MIT
+
+GPLv2 or later
+
+## Credits
+
+Developed by [Benson Imoh](https://stbensonimoh.com) for high-performance WordPress environments.

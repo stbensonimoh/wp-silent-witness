@@ -16,5 +16,5 @@ $table_name = $wpdb->prefix . 'silent_witness_logs';
 // Drop the custom table
 $wpdb->query( "DROP TABLE IF EXISTS $table_name" );
 
-// Clear the readiness transient
-delete_option( 'silent_witness_db_ready' );
+// Clean up the file offset tracking option
+delete_site_option( 'silent_witness_log_offset' );
