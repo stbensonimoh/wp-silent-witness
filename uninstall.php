@@ -16,8 +16,9 @@ global $wpdb;
 $table_name = $wpdb->prefix . 'silent_witness_logs';
 
 // Drop the custom table.
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
-$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS `%1$s`', $table_name ) );
+$table = esc_sql( $table_name );
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 
 // Clean up the file offset tracking option.
 delete_site_option( 'silent_witness_log_offset' );

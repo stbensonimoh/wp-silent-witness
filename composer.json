@@ -34,8 +34,8 @@
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0"
     },
     "scripts": {
-        "phpcs": "phpcs --standard=WordPress --extensions=php --ignore=vendor/ .",
-        "phpcbf": "phpcbf --standard=WordPress --extensions=php --ignore=vendor/ .",
+        "phpcs": "phpcs",
+        "phpcbf": "phpcbf",
         "lint": "find . -name '*.php' -not -path './vendor/*' -exec php -l {} \\;"
     },
     "config": {

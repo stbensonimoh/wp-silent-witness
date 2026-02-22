@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<ruleset name="WP Silent Witness">
+    <description>PHPCS ruleset for WP Silent Witness — WordPress standards with modern PHP 8.x allowances.</description>
+
+    <!-- Scan only plugin source files -->
+    <file>wp-silent-witness.php</file>
+    <file>uninstall.php</file>
+
+    <!-- Exclude generated/third-party directories -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+
+    <!-- Base ruleset -->
+    <rule ref="WordPress"/>
+
+    <!-- Allow short array syntax [] — preferred for PHP 8.x -->
+    <rule ref="Universal.Arrays.DisallowShortArraySyntax">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.Arrays.ArrayDeclarationSpacing"/>
+    <rule ref="Generic.Arrays.DisallowLongArraySyntax">
+        <severity>0</severity>
+    </rule>
+
+    <!-- Plugin entry file cannot be renamed to class-*.php — suppress filename sniff -->
+    <rule ref="WordPress.Files.FileName">
+        <properties>
+            <property name="strict_class_file_names" value="false"/>
+        </properties>
+    </rule>
+</ruleset>
