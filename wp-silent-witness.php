@@ -128,8 +128,8 @@ class WP_Silent_Witness {
 		}
 
 		$charset_collate = $wpdb->get_charset_collate();
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix.
-		$sql             = $wpdb->prepare(
+		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix. */
+		$sql = $wpdb->prepare(
 			"CREATE TABLE `{$this->table}` (
             hash CHAR(32) NOT NULL,
             type VARCHAR(50) NOT NULL,
@@ -145,6 +145,7 @@ class WP_Silent_Witness {
         ) %i;",
 			$charset_collate
 		);
+		/* phpcs:enable */
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
@@ -252,8 +253,8 @@ class WP_Silent_Witness {
 		 *
 		 * @link https://mariadb.com/kb/en/insert-on-duplicate-key-update/
 		 */
+		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix. */
 		$wpdb->query(
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix.
 			$wpdb->prepare(
 				"INSERT INTO `{$this->table}` (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
 				$hash,
@@ -263,6 +264,7 @@ class WP_Silent_Witness {
 				$line
 			)
 		);
+		/* phpcs:enable */
 	}
 
 	/**
@@ -294,13 +296,15 @@ class WP_Silent_Witness {
 				WP_CLI::error( $count );
 			}
 		} elseif ( 'export' === $action ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
 			$results = $wpdb->get_results( "SELECT * FROM `{$this->table}` ORDER BY last_seen DESC" );
+			// phpcs:enable
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
 		} elseif ( 'clear' === $action ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
 			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );
+			// phpcs:enable
 			update_site_option( 'silent_witness_log_offset', 0 );
 			WP_CLI::success( __( 'Cleared.', 'wp-silent-witness' ) );
 		} elseif ( 'destroy' === $action ) {
@@ -308,8 +312,9 @@ class WP_Silent_Witness {
 				WP_CLI::error( __( 'Use: wp silent-witness destroy --yes', 'wp-silent-witness' ) );
 			}
 			wp_clear_scheduled_hook( 'silent_witness_cron_ingest' );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
 			$wpdb->query( "DROP TABLE IF EXISTS `{$this->table}`" );
+			// phpcs:enable
 			delete_site_option( 'silent_witness_log_offset' );
 			WP_CLI::success( __( 'Destroyed.', 'wp-silent-witness' ) );
 		} else {
