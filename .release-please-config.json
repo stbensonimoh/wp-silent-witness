@@ -8,12 +8,16 @@
         {
           "type": "generic",
           "path": "wp-silent-witness.php",
-          "searchForVersion": true
+          "versions": {
+            "2.0.1": "${version}"
+          }
         },
         {
           "type": "generic",
           "path": "readme.txt",
-          "searchForVersion": true
+          "versions": {
+            "2.0.1": "${version}"
+          }
         }
       ]
     }
