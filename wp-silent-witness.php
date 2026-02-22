@@ -121,8 +121,8 @@ class WP_Silent_Witness {
 	 */
 	private function maybe_create_table() {
 		global $wpdb;
+		$like = $wpdb->esc_like( $this->table );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$like         = $wpdb->esc_like( $this->table );
 		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 		if ( $table_exists ) {
 			return;
@@ -174,7 +174,7 @@ class WP_Silent_Witness {
 		$file_size   = filesize( $this->log_path );
 
 		if ( false === $file_size ) {
-			fclose( $handle );
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 			return __( 'Could not read log file size.', 'wp-silent-witness' );
 		}
 
@@ -302,11 +302,11 @@ class WP_Silent_Witness {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
 			$results = $wpdb->get_results( "SELECT * FROM `{$this->table}` ORDER BY last_seen DESC" );
 			// phpcs:enable
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			$json = wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
+						$json = wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
 			if ( false === $json ) {
 				WP_CLI::error( 'Failed to encode logs as JSON: ' . json_last_error_msg() );
 			}
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo $json;
 		} elseif ( 'clear' === $action ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
