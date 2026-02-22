@@ -3,7 +3,7 @@
  * Plugin Name: WP Silent Witness
  * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
- * Version:     2.0.1
+ * Version:     2.1.0
  * Author:      Benson Imoh
  * Author URI:  https://stbensonimoh.com
  * License:     GPLv2 or later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * WP_Silent_Witness Class (v2.0.1 - The Background Ingestor)
+ * WP_Silent_Witness Class (v2.1.0 - The Background Ingestor)
  *
  * This class handles the ingestion of PHP error logs into a custom database table
  * for deduplication and easier management. It utilizes WordPress cron to run
