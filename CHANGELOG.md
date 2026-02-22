@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.2.1](https://github.com/stbensonimoh/wp-silent-witness/compare/v2.2.0...v2.2.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* address PR review feedback from Copilot ([71f47db](https://github.com/stbensonimoh/wp-silent-witness/commit/71f47db45fbb1145363568bfca6a9da78c0f64d5))
+* address review feedback on PR [#37](https://github.com/stbensonimoh/wp-silent-witness/issues/37) ([5aa7a6d](https://github.com/stbensonimoh/wp-silent-witness/commit/5aa7a6dcd84a23ff79bcb13e6f9fb0b873dbfc1b))
+* correct remaining PHPCS ignore placements ([5c4599b](https://github.com/stbensonimoh/wp-silent-witness/commit/5c4599b63b0e340ee30cd54ce730d90502603f97))
+* replace phpcs:ignore with disable/enable blocks for WPCS InterpolatedNotPrepared errors ([5db7fa4](https://github.com/stbensonimoh/wp-silent-witness/commit/5db7fa48cda58c0e97ac32799f1d87f57f2f8802))
+* resolve all PHPCS violations to pass CI lint checks ([97b028c](https://github.com/stbensonimoh/wp-silent-witness/commit/97b028c93474a4a6d35cffaea4681fd4cd51464f))
+* resolve remaining phpcs warnings in CI ([5e452dc](https://github.com/stbensonimoh/wp-silent-witness/commit/5e452dca3b086c4073aee65258aa193a5100b12d))
+* resolve WPCS violations causing CI failures in PR [#37](https://github.com/stbensonimoh/wp-silent-witness/issues/37) ([4bc048c](https://github.com/stbensonimoh/wp-silent-witness/commit/4bc048c0604b6108fe74742f2a0656b053dbd014))
+* rewrite while loop to eliminate assignment-in-condition PHPCS warning ([b4b41f0](https://github.com/stbensonimoh/wp-silent-witness/commit/b4b41f0a4b1733472b4ded59cca35589e85b0d23))
+* suppress DirectDatabaseQuery phpcs warnings on INSERT query ([f1451fc](https://github.com/stbensonimoh/wp-silent-witness/commit/f1451fc29de85c500ba047217b6d85fd7209bf45))
+
 ## [2.2.0](https://github.com/stbensonimoh/wp-silent-witness/compare/v2.1.0...v2.2.0) (2026-02-22)
 
 
