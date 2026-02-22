@@ -105,9 +105,9 @@ Use WP-CLI: 'wp silent-witness clear' to wipe the records but keep the database 
 == Changelog ==
 
 = 2.0.1 =
-* fix: load plugin textdomain for front-end translation support.
-* docs: add comprehensive PHPDoc blocks to all methods and properties.
-* docs: document ON DUPLICATE KEY UPDATE ingestion strategy.
+* Load plugin textdomain for front-end translation support
+* Add comprehensive PHPDoc blocks to all methods and properties
+* Document ON DUPLICATE KEY UPDATE ingestion strategy
 
 = 2.0.0 =
 * Initial release of WP Silent Witness.
