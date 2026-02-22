@@ -1,24 +1,13 @@
 {
   "packages": {
     ".": {
-      "release-type": "php",
+      "release-type": "simple",
       "package-name": "wp-silent-witness",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        {
-          "type": "generic",
-          "path": "wp-silent-witness.php",
-          "versions": {
-            "2.0.1": "${version}"
-          }
-        },
-        {
-          "type": "generic",
-          "path": "readme.txt",
-          "versions": {
-            "2.0.1": "${version}"
-          }
-        }
+        "composer.json",
+        "wp-silent-witness.php",
+        "readme.txt"
       ]
     }
   }
