@@ -1,0 +1,21 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "php",
+      "package-name": "wp-silent-witness",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "wp-silent-witness.php",
+          "searchForVersion": true
+        },
+        {
+          "type": "generic",
+          "path": "readme.txt",
+          "searchForVersion": true
+        }
+      ]
+    }
+  }
+}

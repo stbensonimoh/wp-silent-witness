@@ -105,21 +105,21 @@ Use WP-CLI: 'wp silent-witness clear' to wipe the records but keep the database 
 == Changelog ==
 
 = 2.0.1 =
-* Added comprehensive PHPDoc blocks to all methods and properties
-* Added @since metadata to class-level docblock
-* Documented ON DUPLICATE KEY UPDATE ingestion strategy
+* Load plugin textdomain for front-end translation support
+* Add comprehensive PHPDoc blocks to all methods and properties
+* Document ON DUPLICATE KEY UPDATE ingestion strategy
 
 = 2.0.0 =
-* Initial release of WP Silent Witness
-* Zero-cost log ingestion and deduplication
-* WP-CLI support for export, clear, and destroy operations
-* Automatic database table creation
-* Hash-based deduplication with occurrence counting
+* Initial release of WP Silent Witness.
+* Zero-cost log ingestion and deduplication.
+* WP-CLI support for export, clear, and destroy operations.
+* Automatic database table creation.
+* Hash-based deduplication with occurrence counting.
 
 == Upgrade Notice ==
 
 = 2.0.1 =
-Maintenance release with improved documentation. No breaking changes.
+Minor fix for textdomain loading and improved documentation. No breaking changes.
 
 == Credits ==
 
