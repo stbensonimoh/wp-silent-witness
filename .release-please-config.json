@@ -1,12 +1,12 @@
 {
   "packages": {
     ".": {
-      "release-type": "simple",
+      "release-type": "generic",
       "package-name": "wp-silent-witness",
       "changelog-path": "CHANGELOG.md",
+      "version-file": "wp-silent-witness.php",
       "extra-files": [
         "composer.json",
-        "wp-silent-witness.php",
         "readme.txt"
       ]
     }
