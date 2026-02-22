@@ -285,10 +285,13 @@ class WP_Silent_Witness {
 				WP_CLI::error( $count );
 			}
 		} elseif ( 'export' === $action ) {
-			$results = $wpdb->get_results( "SELECT * FROM $this->table ORDER BY last_seen DESC" );
-			echo json_encode( $results ?: [], JSON_PRETTY_PRINT );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$results = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM `%1$s` ORDER BY last_seen DESC', $this->table ) );
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo wp_json_encode( $results ?: [], JSON_PRETTY_PRINT );
 		} elseif ( 'clear' === $action ) {
-			$wpdb->query( "TRUNCATE TABLE $this->table" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE `%1$s`', $this->table ) );
 			update_site_option( 'silent_witness_log_offset', 0 );
 			WP_CLI::success( __( 'Cleared.', 'wp-silent-witness' ) );
 		} elseif ( 'destroy' === $action ) {
@@ -296,7 +299,8 @@ class WP_Silent_Witness {
 				WP_CLI::error( __( 'Use: wp silent-witness destroy --yes', 'wp-silent-witness' ) );
 			}
 			wp_clear_scheduled_hook( 'silent_witness_cron_ingest' );
-			$wpdb->query( "DROP TABLE IF EXISTS $this->table" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS `%1$s`', $this->table ) );
 			delete_site_option( 'silent_witness_log_offset' );
 			WP_CLI::success( __( 'Destroyed.', 'wp-silent-witness' ) );
 		} else {
