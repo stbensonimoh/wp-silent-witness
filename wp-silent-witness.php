@@ -120,6 +120,7 @@ class WP_Silent_Witness {
 	 */
 	private function maybe_create_table() {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $this->table ) );
 		if ( $table_exists ) {
 			return;
@@ -175,7 +176,8 @@ class WP_Silent_Witness {
 		fseek( $handle, $last_offset );
 
 		$ingested_count = 0;
-		while ( ( $line = fgets( $handle ) ) !== false ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+		// phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
+		while ( ( $line = fgets( $handle ) ) !== false ) {
 			if ( $this->process_line( $line ) ) {
 				++$ingested_count;
 			}
@@ -248,10 +250,7 @@ class WP_Silent_Witness {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnquotedComplexPlaceholder
-				"INSERT INTO `{$table}` (hash, type, message, file, line)
-				VALUES (%s, %s, %s, %s, %d)
-				ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
+				"INSERT INTO `{$table}` (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$hash,
 				$type,
 				substr( $message, 0, 2000 ),
