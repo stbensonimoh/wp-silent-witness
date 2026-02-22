@@ -13,7 +13,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 global $wpdb;
-$table_name = $wpdb->prefix . 'silent_witness_logs';
+$table_name = $wpdb->base_prefix . 'silent_witness_logs';
 
 // Drop the custom table.
 $table = esc_sql( $table_name );

@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * for deduplication and easier management. It utilizes WordPress cron to run
  * periodically and provides WP-CLI commands for manual operations.
  *
+ * @package WP_Silent_Witness
  * @since 2.0.0
  */
 class WP_Silent_Witness {
@@ -127,7 +128,8 @@ class WP_Silent_Witness {
 		}
 
 		$charset_collate = $wpdb->get_charset_collate();
-		$sql             = "CREATE TABLE $this->table (
+		$sql             = $wpdb->prepare(
+			"CREATE TABLE `{$this->table}` (
             hash CHAR(32) NOT NULL,
             type VARCHAR(50) NOT NULL,
             message TEXT NOT NULL,
@@ -139,7 +141,9 @@ class WP_Silent_Witness {
             context TEXT,
             PRIMARY KEY (hash),
             INDEX idx_last_seen (last_seen)
-        ) $charset_collate;";
+        ) %i;",
+			$charset_collate
+		);
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
@@ -247,11 +251,9 @@ class WP_Silent_Witness {
 		 *
 		 * @link https://mariadb.com/kb/en/insert-on-duplicate-key-update/
 		 */
-		$table = esc_sql( $this->table );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO `{$table}` (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"INSERT INTO `{$this->table}` (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
 				$hash,
 				$type,
 				substr( $message, 0, 2000 ),
@@ -290,15 +292,13 @@ class WP_Silent_Witness {
 				WP_CLI::error( $count );
 			}
 		} elseif ( 'export' === $action ) {
-			$table = esc_sql( $this->table );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$results = $wpdb->get_results( "SELECT * FROM `{$table}` ORDER BY last_seen DESC" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$results = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM `{$this->table}` ORDER BY last_seen DESC' ) );
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			echo wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
 		} elseif ( 'clear' === $action ) {
-			$table = esc_sql( $this->table );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$wpdb->query( "TRUNCATE TABLE `{$table}`" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( $wpdb->prepare( 'TRUNCATE TABLE `{$this->table}`' ) );
 			update_site_option( 'silent_witness_log_offset', 0 );
 			WP_CLI::success( __( 'Cleared.', 'wp-silent-witness' ) );
 		} elseif ( 'destroy' === $action ) {
@@ -306,9 +306,8 @@ class WP_Silent_Witness {
 				WP_CLI::error( __( 'Use: wp silent-witness destroy --yes', 'wp-silent-witness' ) );
 			}
 			wp_clear_scheduled_hook( 'silent_witness_cron_ingest' );
-			$table = esc_sql( $this->table );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.SchemaChange
-			$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.DirectDatabaseQuery.SchemaChange
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS `{$this->table}`' ) );
 			delete_site_option( 'silent_witness_log_offset' );
 			WP_CLI::success( __( 'Destroyed.', 'wp-silent-witness' ) );
 		} else {
