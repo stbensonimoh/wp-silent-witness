@@ -253,7 +253,7 @@ class WP_Silent_Witness {
 		 *
 		 * @link https://mariadb.com/kb/en/insert-on-duplicate-key-update/
 		 */
-		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix. */
+		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Table name interpolation and direct query required for high-performance logging. */
 		$wpdb->query(
 			$wpdb->prepare(
 				"INSERT INTO `{$this->table}` (hash, type, message, file, line) VALUES (%s, %s, %s, %s, %d) ON DUPLICATE KEY UPDATE count = count + 1, last_seen = NOW()",
