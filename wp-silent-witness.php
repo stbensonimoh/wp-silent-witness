@@ -176,11 +176,12 @@ class WP_Silent_Witness {
 		fseek( $handle, $last_offset );
 
 		$ingested_count = 0;
-		// phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition
-		while ( ( $line = fgets( $handle ) ) !== false ) {
+		$line           = fgets( $handle );
+		while ( false !== $line ) {
 			if ( $this->process_line( $line ) ) {
 				++$ingested_count;
 			}
+			$line = fgets( $handle );
 		}
 
 		update_site_option( 'silent_witness_log_offset', ftell( $handle ) );
