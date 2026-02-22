@@ -14,9 +14,55 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      # Custom step to synchronize WordPress plugin headers
+      - name: Sync WordPress Plugin Headers
+        if: ${{ steps.release.outputs.pr }}
+        run: |
+          # 1. Extract version and branch from the PR output
+          PR_JSON='${{ steps.release.outputs.pr }}'
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+          HEAD_BRANCH=$(echo "$PR_JSON" | jq -r '.headBranchName')
+
+          # Extract version from title like "chore(main): release wp-silent-witness 2.1.1"
+          VERSION=$(echo "$PR_TITLE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
+
+          if [ -z "$VERSION" ]; then
+            echo "No version found in PR title. Skipping sync."
+            exit 0
+          fi
+
+          echo "Syncing WordPress plugin headers to version: $VERSION on branch: $HEAD_BRANCH"
+
+          # 2. Fetch and checkout the release branch
+          git fetch origin $HEAD_BRANCH
+          git checkout $HEAD_BRANCH
+
+          # 3. Use sed to update version headers in plugin files
+          # Format for wp-silent-witness.php: " * Version:     X.Y.Z"
+          sed -i "s/^ \* Version:.*/ * Version:     $VERSION/" wp-silent-witness.php
+          # Format for readme.txt: "Stable tag: X.Y.Z"
+          sed -i "s/^Stable tag:.*/Stable tag: $VERSION/" readme.txt
+
+          # 4. Commit and push the changes back to the PR branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add wp-silent-witness.php readme.txt
+
+          if git diff --staged --quiet; then
+            echo "No changes to headers. Everything is in sync."
+          else
+            git commit -m "chore: sync wordpress plugin headers to $VERSION"
+            git push origin $HEAD_BRANCH
+          fi
