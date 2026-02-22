@@ -2,9 +2,16 @@
     "name": "stbensonimoh/wp-silent-witness",
     "description": "Zero-cost, high-performance error log ingestion and deduplication for WordPress.",
     "type": "wordpress-plugin",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "license": "GPL-2.0-or-later",
-    "keywords": ["wordpress", "plugin", "error", "logging", "debug", "mu-plugin"],
+    "keywords": [
+        "wordpress",
+        "plugin",
+        "error",
+        "logging",
+        "debug",
+        "mu-plugin"
+    ],
     "homepage": "https://github.com/stbensonimoh/wp-silent-witness",
     "support": {
         "issues": "https://github.com/stbensonimoh/wp-silent-witness/issues",
