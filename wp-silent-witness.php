@@ -122,15 +122,15 @@ class WP_Silent_Witness {
 	private function maybe_create_table() {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $this->table ) );
+		$like         = $wpdb->esc_like( $this->table );
+		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 		if ( $table_exists ) {
 			return;
 		}
 
 		$charset_collate = $wpdb->get_charset_collate();
 		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix. */
-		$sql = $wpdb->prepare(
-			"CREATE TABLE `{$this->table}` (
+		$sql = "CREATE TABLE `{$this->table}` (
             hash CHAR(32) NOT NULL,
             type VARCHAR(50) NOT NULL,
             message TEXT NOT NULL,
@@ -142,9 +142,7 @@ class WP_Silent_Witness {
             context TEXT,
             PRIMARY KEY (hash),
             INDEX idx_last_seen (last_seen)
-        ) %i;",
-			$charset_collate
-		);
+        ) {$charset_collate};";
 		/* phpcs:enable */
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -174,6 +172,11 @@ class WP_Silent_Witness {
 
 		$last_offset = (int) get_site_option( 'silent_witness_log_offset', 0 );
 		$file_size   = filesize( $this->log_path );
+
+		if ( false === $file_size ) {
+			fclose( $handle );
+			return __( 'Could not read log file size.', 'wp-silent-witness' );
+		}
 
 		if ( $file_size < $last_offset ) {
 			$last_offset = 0;
@@ -300,7 +303,11 @@ class WP_Silent_Witness {
 			$results = $wpdb->get_results( "SELECT * FROM `{$this->table}` ORDER BY last_seen DESC" );
 			// phpcs:enable
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
+			$json = wp_json_encode( ! empty( $results ) ? $results : [], JSON_PRETTY_PRINT );
+			if ( false === $json ) {
+				WP_CLI::error( 'Failed to encode logs as JSON: ' . json_last_error_msg() );
+			}
+			echo $json;
 		} elseif ( 'clear' === $action ) {
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- No user input; table name derived from $wpdb->base_prefix.
 			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );

@@ -36,7 +36,7 @@
     "scripts": {
         "phpcs": "phpcs --ignore=vendor/*",
         "phpcbf": "phpcbf",
-        "lint": "find . -maxdepth 2 -name \"*.php\" -not -path \"./vendor/*\" -exec php -l {} \\;"
+        "lint": "find . -maxdepth 2 -name \"*.php\" -not -path \"./vendor/*\" -print0 | xargs -0 -n1 php -l"
     },
     "config": {
         "allow-plugins": {
