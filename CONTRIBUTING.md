@@ -92,3 +92,19 @@ Auto-fix where possible:
 ```bash
 composer run phpcbf
 ```
+
+## Troubleshooting CI
+
+### Release Please Workflow Failures
+
+If the **Release Please** workflow fails with the error:
+`release-please failed: GitHub Actions is not permitted to create or approve pull requests.`
+
+You need to enable the following setting in your GitHub repository:
+
+1. Go to **Settings** > **Actions** > **General**.
+2. Scroll down to **Workflow permissions**.
+3. Check the box for **Allow GitHub Actions to create and approve pull requests**.
+4. Click **Save**.
+
+If this setting is restricted by organization policy, you must use a Personal Access Token (PAT) with `repo` and `workflow` scopes instead of the default `GITHUB_TOKEN`.
