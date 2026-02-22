@@ -3,11 +3,10 @@
     ".": {
       "release-type": "simple",
       "package-name": "wp-silent-witness",
+      "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        "composer.json",
-        "wp-silent-witness.php",
-        "readme.txt"
+        "composer.json"
       ]
     }
   }
