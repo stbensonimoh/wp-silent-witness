@@ -4,6 +4,7 @@
  * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
  * Version:     2.2.1
+ * Requires PHP: 8.1
  * Author:      Benson Imoh
  * Author URI:  https://stbensonimoh.com
  * License:     GPLv2 or later
@@ -83,6 +84,7 @@ class WP_Silent_Witness {
 		$this->log_path = WP_CONTENT_DIR . '/debug.log';
 
 		$this->maybe_create_table();
+		$this->maybe_upgrade();
 
 		// Load plugin textdomain.
 		add_action( 'init', [ $this, 'load_textdomain' ] );
@@ -131,7 +133,7 @@ class WP_Silent_Witness {
 		$charset_collate = $wpdb->get_charset_collate();
 		/* phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name cannot be a placeholder; it is derived from $wpdb->base_prefix. */
 		$sql = "CREATE TABLE `{$this->table}` (
-            hash CHAR(32) NOT NULL,
+            hash CHAR(64) NOT NULL,
             type VARCHAR(50) NOT NULL,
             message TEXT NOT NULL,
             file VARCHAR(255) NOT NULL,
@@ -147,6 +149,44 @@ class WP_Silent_Witness {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+	}
+
+	/**
+	 * Handles database upgrades when the plugin version changes.
+	 *
+	 * This method checks the stored database version and performs necessary
+	 * migrations. For version 2.3.0+, it truncates the logs table to ensure
+	 * fresh hashes are generated with the new xxh3 algorithm.
+	 *
+	 * @since 2.3.0
+	 * @return void
+	 */
+	private function maybe_upgrade() {
+		global $wpdb;
+		$db_version = get_site_option( 'silent_witness_db_version', '2.0.0' );
+
+		if ( version_compare( $db_version, '2.3.0', '<' ) ) {
+			// Widen hash column from CHAR(32) to CHAR(64) for xxh3 support.
+			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema change required for upgrade, table name is safe. */
+			$wpdb->query( "ALTER TABLE `{$this->table}` MODIFY COLUMN hash CHAR(64) NOT NULL" );
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'WP Silent Witness: Failed to widen hash column: ' . $wpdb->last_error );
+				return;
+			}
+
+			// Truncate table to ensure fresh hashes with new xxh3 algorithm.
+			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
+			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'WP Silent Witness: Failed to truncate table: ' . $wpdb->last_error );
+				return;
+			}
+
+			update_site_option( 'silent_witness_log_offset', 0 );
+			update_site_option( 'silent_witness_db_version', '2.3.0' );
+		}
 	}
 
 	/**
@@ -222,7 +262,7 @@ class WP_Silent_Witness {
 	/**
 	 * Stores the parsed log data into the database.
 	 *
-	 * Calculates an MD5 hash of the error details to use as a primary key.
+	 * Calculates an xxh3 hash of the error details to use as a primary key.
 	 * This allows for high-performance deduplication using "ON DUPLICATE KEY UPDATE",
 	 * which increments the occurrence count and updates the last_seen timestamp.
 	 *
@@ -237,7 +277,7 @@ class WP_Silent_Witness {
 	private function store_log( $type, $message, $file, $line ) {
 		global $wpdb;
 		$clean_file = str_replace( ABSPATH, '', $file );
-		$hash       = md5( $type . $message . $clean_file . $line );
+		$hash       = hash( 'xxh3', implode( '|', [ $type, $message, $clean_file, (string) $line ] ) );
 
 		/*
 		 * Deduplication Strategy: ON DUPLICATE KEY UPDATE
