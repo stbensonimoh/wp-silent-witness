@@ -166,7 +166,7 @@ class WP_Silent_Witness {
 
 		if ( version_compare( $db_version, '2.3.0', '<' ) ) {
 			// Widen hash column from CHAR(32) to CHAR(64) for xxh3 support.
-			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
+			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema change required for upgrade, table name is safe. */
 			$wpdb->query( "ALTER TABLE `{$this->table}` MODIFY COLUMN hash CHAR(64) NOT NULL" );
 			// Truncate table to ensure fresh hashes with new xxh3 algorithm.
 			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
