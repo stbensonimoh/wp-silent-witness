@@ -165,9 +165,13 @@ class WP_Silent_Witness {
 		$db_version = get_site_option( 'silent_witness_db_version', '2.0.0' );
 
 		if ( version_compare( $db_version, '2.3.0', '<' ) ) {
+			// Widen hash column from CHAR(32) to CHAR(64) for xxh3 support.
+			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
+			$wpdb->query( "ALTER TABLE `{$this->table}` MODIFY COLUMN hash CHAR(64) NOT NULL" );
 			// Truncate table to ensure fresh hashes with new xxh3 algorithm.
 			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
 			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );
+			update_site_option( 'silent_witness_log_offset', 0 );
 			update_site_option( 'silent_witness_db_version', '2.3.0' );
 		}
 	}
@@ -245,7 +249,7 @@ class WP_Silent_Witness {
 	/**
 	 * Stores the parsed log data into the database.
 	 *
-	 * Calculates an MD5 hash of the error details to use as a primary key.
+	 * Calculates an xxh3 hash of the error details to use as a primary key.
 	 * This allows for high-performance deduplication using "ON DUPLICATE KEY UPDATE",
 	 * which increments the occurrence count and updates the last_seen timestamp.
 	 *
