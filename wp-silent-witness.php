@@ -3,7 +3,7 @@
  * Plugin Name: WP Silent Witness
  * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
- * Version:     2.3.0
+ * Version:     2.2.1
  * Author:      Benson Imoh
  * Author URI:  https://stbensonimoh.com
  * License:     GPLv2 or later
@@ -166,7 +166,8 @@ class WP_Silent_Witness {
 
 		if ( version_compare( $db_version, '2.3.0', '<' ) ) {
 			// Truncate table to ensure fresh hashes with new xxh3 algorithm.
-			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
+			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );
 			update_site_option( 'silent_witness_db_version', '2.3.0' );
 		}
 	}
