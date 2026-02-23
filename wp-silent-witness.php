@@ -4,6 +4,7 @@
  * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
  * Version:     2.2.1
+ * Requires PHP: 8.1
  * Author:      Benson Imoh
  * Author URI:  https://stbensonimoh.com
  * License:     GPLv2 or later
@@ -168,9 +169,21 @@ class WP_Silent_Witness {
 			// Widen hash column from CHAR(32) to CHAR(64) for xxh3 support.
 			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema change required for upgrade, table name is safe. */
 			$wpdb->query( "ALTER TABLE `{$this->table}` MODIFY COLUMN hash CHAR(64) NOT NULL" );
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'WP Silent Witness: Failed to widen hash column: ' . $wpdb->last_error );
+				return;
+			}
+
 			// Truncate table to ensure fresh hashes with new xxh3 algorithm.
 			/* phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is safe, derived from $wpdb->base_prefix. */
 			$wpdb->query( "TRUNCATE TABLE `{$this->table}`" );
+			if ( $wpdb->last_error ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( 'WP Silent Witness: Failed to truncate table: ' . $wpdb->last_error );
+				return;
+			}
+
 			update_site_option( 'silent_witness_log_offset', 0 );
 			update_site_option( 'silent_witness_db_version', '2.3.0' );
 		}
