@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.0.0](https://github.com/stbensonimoh/wp-silent-witness/compare/v2.2.1...v3.0.0) (2026-02-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* Hash algorithm migration requires table truncation
+
+### Features
+
+* modernize hash algorithm and PHP constraints (v2.3.0) ([d86d0bf](https://github.com/stbensonimoh/wp-silent-witness/commit/d86d0bf4869d0f869f02582b1948b2b3c6466052))
+* modernize hash algorithm and PHP constraints (v2.3.0) ([17d95c7](https://github.com/stbensonimoh/wp-silent-witness/commit/17d95c7e7d0f2c8dbf17fb4ab3e51e895a6c24c0)), closes [#22](https://github.com/stbensonimoh/wp-silent-witness/issues/22) [#24](https://github.com/stbensonimoh/wp-silent-witness/issues/24)
+
+
+### Bug Fixes
+
+* address Copilot review comments on PR [#39](https://github.com/stbensonimoh/wp-silent-witness/issues/39) ([0d96eca](https://github.com/stbensonimoh/wp-silent-witness/commit/0d96eca48d20d1e49e5cbe0d22803242f99d69a6))
+* address new Copilot review comments ([be37db2](https://github.com/stbensonimoh/wp-silent-witness/commit/be37db280decc42eb9dba668206dfc39439d8deb))
+
 ## [2.2.1](https://github.com/stbensonimoh/wp-silent-witness/compare/v2.2.0...v2.2.1) (2026-02-22)
 
 
