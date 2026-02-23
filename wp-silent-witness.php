@@ -3,7 +3,7 @@
  * Plugin Name: WP Silent Witness
  * Plugin URI:  https://github.com/stbensonimoh/wp-silent-witness
  * Description: Zero-cost, high-performance log ingestion and de-duplication for WordPress.
- * Version:     2.2.1
+ * Version:     3.0.0
  * Requires PHP: 8.1
  * Author:      Benson Imoh
  * Author URI:  https://stbensonimoh.com
