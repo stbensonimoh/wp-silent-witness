@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0](https://github.com/stbensonimoh/wp-silent-witness/compare/v3.0.0...v4.0.0) (2026-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* v4.0.0 requires PHP 8.1+, plugin renamed to 'Silent Witness for WordPress' for WordPress.org compliance
+
+### Documentation
+
+* add technical specification for v4.0.0 ([b85fa60](https://github.com/stbensonimoh/wp-silent-witness/commit/b85fa60cb03b6ed48a35685c7d382779367f14f3))
+
 ## [3.0.0](https://github.com/stbensonimoh/wp-silent-witness/compare/v2.2.1...v3.0.0) (2026-02-23)
 
 
